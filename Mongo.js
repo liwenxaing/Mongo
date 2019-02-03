@@ -8,8 +8,6 @@
 const mongoClient = require("mongodb").MongoClient;
 const config = require("./dbconfig.json");
 
-console.log(config.dbName);
-
 class Mongo {
 
     // 外部暴露方法 获取到类实例
