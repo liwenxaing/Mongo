@@ -2,13 +2,17 @@
  * 基于Promise和单例设计模式封装的一个mongodb DB库
  * 优化了链接数据库的时间
  * Author  LiWenxiang
- * 2019-2-2
+ + Version  0.0.2
+ * 2019-3-19
  */
 
 const mongoClient = require("mongodb").MongoClient;
+var ObjectID = require('mongodb').ObjectID;
 const config = require("./dbconfig.json");
 
 class Mongo {
+
+
 
     // 外部暴露方法 获取到类实例
     static getInit() {
@@ -25,7 +29,7 @@ class Mongo {
      * @param errData
      * @param sucessData
      */
-    isReturnData(resolve, reject, errData, sucessData) {
+     isReturnData(resolve, reject, errData, sucessData) {
         if (errData) {
             reject(errData);
             return;
@@ -48,7 +52,7 @@ class Mongo {
     connect() {
         return new Promise((resolve, reject) => {
             if (!this.isClient) {
-                mongoClient.connect(config.dbUrl, (err, client) => {
+                mongoClient.connect(config.dbUrl,{ useNewUrlParser: true }, (err, client) => {
                     if (err) {
                         reject(err);
                         return;
@@ -57,7 +61,7 @@ class Mongo {
                     resolve(this.isClient);
                 });
             } else {
-                return this.isClient;
+                resolve(this.isClient);
             }
         })
     }
@@ -79,17 +83,29 @@ class Mongo {
         })
     }
 
+
+    findOneById(collectionName,id) {
+        return new Promise((resolve, reject) => {
+            this.connect().then(db => {
+                let res = db.collection(collectionName).find({_id:ObjectID(id)});
+                res.toArray((err, docs) => {
+                    this.isReturnData(resolve, reject, err, docs)
+                });
+            });
+        })
+    }
+
     /**
      * @param collectionName
      * @param queryJson
      * @param updatedJson
      * @returns {Promise<any>}
      */
-    update(collectionName, queryJson, updatedJson) {
+    updateById(collectionName,id, updatedJson) {
         return new Promise((resolve, reject) => {
             this.connect().then(db => {
-                let res = db.collection(collectionName).update(queryJson, {$set: updatedJson}, (err, result) => {
-                    this.isReturnData(resolve, reject, err, result)
+                let res = db.collection(collectionName).update({_id:ObjectID(id)}, {$set: updatedJson}, (err, result) => {
+                    this.isReturnData(resolve, reject, err, result);
                 });
             });
         })
@@ -98,14 +114,14 @@ class Mongo {
     /**
      *
      * @param collectionName
-     * @param queryJson
+     * @param id
      * @returns {Promise<any>}
      */
-    remove(collectionName, queryJson) {
+    removeById(collectionName,id) {
         return new Promise((resolve, reject) => {
             this.connect().then(db => {
-                let res = db.collection(collectionName).removeOne(queryJson, (err, result) => {
-                    this.isReturnData(resolve, reject, err, result)
+                let res = db.collection(collectionName).deleteOne({_id:ObjectID(id)}, (err, result) => {
+                    this.isReturnData(resolve, reject, err, result);
                 });
             });
         })
@@ -131,23 +147,17 @@ class Mongo {
 
     /**
      * @param collectionName
-     * @param json
      * @returns {Promise<any>}
      */
-    count(collectionName,json={}){
+    count(collectionName){
         return new Promise((resolve,reject)=>{
             this.connect().then(db=>{
-                let res = db.collection(collectionName).find(json);
-                res.toArray((err, docs) => {
-                    if (err) {
-                        reject(err);
-                        return;
-                    }
-                    resolve(docs.length);
-                });
+                let res = db.collection(collectionName).countDocuments();
+                resolve(res);
             })
-        });
+        })
     }
+
 
     /**
      * @param collectionName
@@ -203,7 +213,8 @@ class Mongo {
              });
         });
     }
-
 }
+
+
 
 module.exports = Mongo.getInit();
